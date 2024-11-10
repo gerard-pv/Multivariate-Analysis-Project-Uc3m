@@ -34,7 +34,25 @@ data.OperatingSystems = categorical(data.OperatingSystems)
 data.Browser = categorical(data.OperatingSystems)
 data.Weekend = categorical(double(strcmp(data.Weekend, 'TRUE')));
 data.Revenue = categorical(double(strcmp(data.Revenue, 'TRUE')));
+data.SpecialDay = categorical(data.SpecialDay);
+data = renamevars(data, {'Administrative_Duration','Informational_Duration', 'ProductRelated_Duration'}, ...
+    {'AdministrativeDuration', 'InformationalDuration', 'ProductRelatedDuration'})
+
+%% Dataset subsample to 1000 obs
+
+rng(100);  % Set a seed to get the same subsample each time
+n = 1000;
+numRows = height(data);
+randomIndices = randperm(numRows, n);
+data = data(randomIndices, :);
 
 %% Data Summary
 
 summary(data)
+
+
+%% Data export
+
+save('data/matlab_datasets/processed_dataset', 'data');
+
+%%
