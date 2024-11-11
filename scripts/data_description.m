@@ -75,3 +75,10 @@ title('Correlation Matrix Heatmap');
 h.Colormap = jet;  
 h.ColorLimits = [-1 1];
 colorbar;
+
+%%
+
+numeric_data.Revenue = data.Revenue;
+figure;
+gplotmatrix(table2array(numeric_data(:,1:end-1)), [], numeric_data.Revenue);
+exportgraphics(gcf, 'high_res_figure.png', 'Resolution', 1000);
