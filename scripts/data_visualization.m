@@ -2,10 +2,11 @@
 
 %% Load Processed Data
 load('data/matlab_datasets/processed_dataset.mat');
-
-%% Numerical Variable Distribution
 numeric_vars = data(:, vartype("numeric"));
 num_vars = width(numeric_vars);
+numeric_data_matrix = table2array(numeric_vars);
+
+%% Numerical Variable Distribution
 
 for i = 1:num_vars
     var_name = numeric_vars.Properties.VariableNames{i};
@@ -51,3 +52,20 @@ for i = 1:num_cat_vars
     % Save figure
     exportgraphics(gcf, ['figures/' var_name '_distribution.png'], 'Resolution', 900);
 end
+
+
+%% Heatmap of Correlation Matrix
+
+red = [1, 0, 0];      % RGB for red
+white = [1, 1, 1];    % RGB for white
+
+% Create a colormap with white on both ends and red in the middle
+custom_colormap = [linspace(red(1), white(1), 50)', linspace(red(2), white(2), 50)', linspace(red(3), white(3), 50)';
+                   linspace(white(1), red(1), 50)', linspace(white(2), red(2), 50)', linspace(white(3), red(3), 50)'];
+
+
+correlation_matrix = corr(numeric_data_matrix);
+figure;
+heatmap(correlation_matrix, 'Colormap', custom_colormap, 'ColorLimits', [-1, 1]);
+title('Correlation Matrix Heatmap');
+saveas(gcf, 'figures/correlation_matrix_heatmap.png', 'Resolution', 900);

@@ -33,9 +33,4 @@ saveas(gcf, 'figures/pca_cumulative_variance.png', 'Resolution', 900);
 disp('--- Principal Component Loadings ---');
 disp(coeff);
 
-%% Heatmap of Correlation Matrix
-correlation_matrix = corr(numeric_data_matrix);
-figure;
-heatmap(correlation_matrix, 'Colormap', jet, 'ColorLimits', [-1, 1]);
-title('Correlation Matrix Heatmap');
-saveas(gcf, 'figures/correlation_matrix_heatmap.png', 'Resolution', 900);
+
