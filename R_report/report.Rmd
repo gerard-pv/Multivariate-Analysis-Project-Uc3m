@@ -1,0 +1,141 @@
+---
+title: "report"
+output: pdf_document
+date: "`r Sys.Date()`"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+library(ggplot2)
+library(readr)
+library(lattice)
+library(reshape2)
+```
+
+```{r}
+data <- readRDS('../data/R_datasets/processed_dataset.rds')
+
+# Categorical variables
+categorical_vars <- data %>%
+  select(where(is.factor))
+
+# Numerical variables
+numeric_vars <- data %>%
+  select(where(is.numeric))
+```
+
+```{r}
+summary(numeric_vars)
+```
+
+
+```{r}
+summary(categorical_vars)
+```
+
+
+
+```{r}
+for (var_name in names(categorical_vars)) {
+  
+  # Create a frequency table for the variable
+  freq_table <- table(categorical_vars[[var_name]])
+  
+  # Convert the frequency table to a data frame
+  freq_df <- as.data.frame(freq_table)
+  colnames(freq_df) <- c(var_name, "count")
+  
+  # Plot the distribution of each categorical variable
+  # plt <- ggplot(freq_df, aes_string(x = var_name, y = "count", fill = var_name)) +
+  #   geom_bar(stat = "identity") +
+  #   labs(
+  #     title = paste("Distribution of", var_name),
+  #     x = var_name,
+  #     y = "Count"
+  #   ) +
+  #   theme_minimal()
+  
+  plt <-  barplot(freq_table, 
+          main = var_name, 
+          xlab = var_name, 
+          ylab = "Count", 
+          border = "black", 
+          cex.names = 0.8)  # Adjust the size of the category names
+  print(plt)
+}
+```
+
+
+```{r}
+for (i in 1:ncol(numeric_vars)) {
+  var_name <- colnames(numeric_vars)[i]
+  
+  # Create the figure with 2 subplots (boxplot and histogram)
+  par(mfrow = c(1, 2))  # 1 row, 2 columns for subplots
+  
+  # Boxplot
+  boxplot(numeric_vars[[i]], horizontal = TRUE)
+  
+  # Histogram
+  hist(numeric_vars[[i]], breaks = 20, main = "", xlab = "")
+  
+  mtext(var_name, outer = TRUE, cex = 1.5, line = -2)
+}
+
+```
+
+
+```{r}
+# Compute the correlation matrix
+correlation_matrix <- cor(numeric_vars)
+
+correlation_melted <- melt(correlation_matrix)
+
+# Heatmap of the correlation matrix with values
+ggplot(correlation_melted, aes(Var1, Var2, fill = value)) +
+  geom_tile() +  # Create the heatmap tiles
+  geom_text(aes(label = round(value, 2)), color = "black", size = 3) +  # Add the correlation values inside the tiles
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1)) +  # Color scale
+  labs(title = "Correlation Matrix Heatmap", x = "Variables", y = "Variables") +  # Title and labels
+  theme_minimal() +  # Clean theme
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-ax
+
+```
+
+
+```{r}
+# PCA with R built in function
+pca <- prcomp(numeric_vars, center = TRUE, scale. = TRUE)
+pca$rotation
+```
+
+```{r}
+# PCA step by step
+
+eig_result <- eigen(correlation_matrix)
+
+# Get the eigenvalues and eigenvectors
+Lambda <- eig_result$values  # Eigenvalues
+T <- eig_result$vectors      # Eigenvectors
+
+# Sort eigenvalues and eigenvectors in descending order
+sorted_indices <- order(Lambda, decreasing = TRUE)  # Indices for sorting
+
+# Apply the sorting
+Lambda_sorted <- Lambda[sorted_indices]  # Sorted eigenvalues
+T_sorted <- T[, sorted_indices]          # Sorted eigenvectors
+
+# Show the sorted eigenvalues
+Lambda_sorted
+
+# Show the eigenvectors
+T_sorted
+
+
+
+```
+
