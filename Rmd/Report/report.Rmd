@@ -1,0 +1,211 @@
+---
+title: "Dataset Description and PCA Analysis"
+author: "Your Name"
+output:
+  pdf_document:
+    latex_engine: xelatex
+date: "`r Sys.Date()`"
+---
+
+# 1. Dataset Description
+
+## 1.1 Overview
+
+The dataset contains multivariate data, including quantitative, binary, and categorical variables. It has 12,330 rows and 18 columns, representing user online shopping behavior. \## 1.2 Feature Breakdown
+
+Below is a table representation with all the key features:
+
+| **Feature Name**        | **Type**     | **Description**                                                   |
+|-------------------|-----------------|------------------------------------|
+| Administrative          | Quantitative | Number of administrative pages visited                            |
+| Administrative_Duration | Quantitative | Time spent on administrative pages in seconds                     |
+| Informational           | Quantitative | Number of informational pages visited                             |
+| Informational_Duration  | Quantitative | Time spent on informational pages in seconds                      |
+| ProductRelated          | Quantitative | Number of product-related pages visited                           |
+| ProductRelated_Duration | Quantitative | Time spent on product-related pages in seconds                    |
+| BounceRates             | Quantitative | Percentage of visitors leaving after one page                     |
+| ExitRates               | Quantitative | Percentage of sessions exiting from each page                     |
+| PageValues              | Quantitative | Average value attributed to a page                                |
+| SpecialDay              | Quantitative | Metric indicating proximity to significant holidays               |
+| Weekend                 | Binary       | Indicates if the session occurred on a weekend (1 = Yes, 0 = No)  |
+| Revenue                 | Binary       | Indicates if the session resulted in a purchase (1 = Yes, 0 = No) |
+| VisitorType             | Categorical  | Visitor category (e.g., Returning, New, Other)                    |
+| Month                   | Categorical  | Month of the visit (e.g., Jan, Feb)                               |
+| OperatingSystems        | Categorical  | Visitor\u2019s operating system                                   |
+| Browser                 | Categorical  | Browser used by the visitor                                       |
+| Region                  | Categorical  | Visitor\u2019s geographical region                                |
+| TrafficType             | Categorical  | Type of traffic source leading to the visit                       |
+
+## 1.3 Initial Observations
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+# Load necessary libraries
+library(ggplot2)   # For data visualization
+library(readr)     # For reading datasets
+library(lattice)   # For lattice-based visualizations
+library(reshape2)  # For reshaping data
+library(dplyr)     # For data manipulation
+library(pander)
+```
+
+```{r}
+data <- readRDS('/Users/despoinaiapona/Downloads/processed_dataset.rds')
+
+# Checking for missing values
+sapply(data, function(x) sum(is.na(x)))
+```
+\vspace{0.3cm}
+
+
+```{r}
+# Split numeric and categorical variables
+numeric_vars <- data %>% select(where(is.numeric))
+categorical_vars <- data %>% select(where(is.factor))
+```
+
+```{r}
+# Summarize numeric variables
+numeric_summary <- summary(numeric_vars)
+
+# Display the summary
+pander(numeric_summary, caption = "Summary of Numeric Variables")
+
+```
+
+```{r}
+# Summarize categorical variables
+categorical_summary <- summary(categorical_vars)
+
+# Display the summary
+pander(categorical_summary, caption = "Summary of Categorical Variables")
+```
+\vspace{1.5cm}
+
+## 1.4 Visualizations
+
+### 1.4.1  Barplots for Categorical Variables
+
+```{r}
+# Set the layout for 3 rows and 3 columns (9 plots per page)
+par(mfrow = c(3, 3), mar = c(4, 4, 2, 1))  # Adjust margins
+
+# Create barplots
+for (var_name in names(categorical_vars)) {
+  barplot(table(categorical_vars[[var_name]]), 
+          main = paste("Distribution of", var_name), 
+          xlab = var_name, 
+          ylab = "Count", 
+          col = "lightblue")
+}
+```
+
+
+#### 1.4.1.1 General Observations
+
+-   Most sessions happen on regular days, with little activity on holidays.
+
+-   There are seasonal patterns, with high points in May and November.
+
+-   Most users go with Operating System 2 and Browser 2.
+
+-   Traffic comes mostly from Region 1 and Traffic Type 2.
+
+-   Returning visitors account for a significant part of site sessions, indicating that users enjoy the content and experience.
+
+-   The majority of sessions are on weekdays, and only a small part lead to sales.
+
+\vspace{0.3cm}
+
+
+```{r}
+# Set layout for 3 rows and 3 columns (9 plots per page)
+par(mfrow = c(3, 3), mar = c(4, 4, 2, 1))  # Adjust margins
+
+# Create histograms for each numeric variable
+for (var_name in names(numeric_vars)) {
+  hist(numeric_vars[[var_name]], 
+       main = paste("Histogram of", var_name), 
+       xlab = var_name, 
+       col = "lightgreen", 
+       breaks = 20)
+}
+```
+
+
+
+```{r}
+for (i in 1:ncol(numeric_vars)) {
+  var_name <- colnames(numeric_vars)[i]
+  
+  par(mfrow = c(1, 2), mar = c(5, 4, 4, 2) + 0.1, oma = c(0, 0, 2, 0))
+  
+  # Boxplot
+  boxplot(numeric_vars[[i]], horizontal = TRUE, 
+          main = paste("Boxplot of", var_name), 
+          xlab = "Values")
+  
+  # Histogram
+  hist(numeric_vars[[i]], breaks = 20, 
+       main = paste("Histogram of", var_name), 
+       xlab = var_name, 
+       ylab = "Frequency")
+  
+  # Add mean and median to the title
+  mtext(paste("Variable:", var_name, "| Mean:", round(mean(numeric_vars[[i]]), 2), 
+              "| Median:", round(median(numeric_vars[[i]]), 2)), 
+        outer = TRUE, cex = 1, line = -1)
+}
+```
+
+```{r}
+# Compute the correlation matrix
+correlation_matrix <- cor(numeric_vars)
+
+correlation_melted <- melt(correlation_matrix)
+
+# Heatmap of the correlation matrix with values
+ggplot(correlation_melted, aes(Var1, Var2, fill = value)) +
+  geom_tile() +  # Create the heatmap tiles
+  geom_text(aes(label = round(value, 2)), color = "black", size = 3) +  # Add the correlation values inside the tiles
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1)) +  # Color scale
+  labs(title = "Correlation Matrix Heatmap", x = "Variables", y = "Variables") +  # Title and labels
+  theme_minimal() +  # Clean theme
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-ax
+
+```
+
+```{r}
+# PCA with R built in function
+pca <- prcomp(numeric_vars, center = TRUE, scale. = TRUE)
+pca$rotation
+```
+
+```{r}
+# PCA step by step
+
+eig_result <- eigen(correlation_matrix)
+
+# Get the eigenvalues and eigenvectors
+Lambda <- eig_result$values  # Eigenvalues
+T <- eig_result$vectors      # Eigenvectors
+
+# Sort eigenvalues and eigenvectors in descending order
+sorted_indices <- order(Lambda, decreasing = TRUE)  # Indices for sorting
+
+# Apply the sorting
+Lambda_sorted <- Lambda[sorted_indices]  # Sorted eigenvalues
+T_sorted <- T[, sorted_indices]          # Sorted eigenvectors
+
+# Show the sorted eigenvalues
+Lambda_sorted
+
+# Show the eigenvectors
+T_sorted
+
+
+
+```
