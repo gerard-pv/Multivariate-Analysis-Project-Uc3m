@@ -15,14 +15,16 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, out.height
 
 ```{r}
 # Load necessary libraries
-library(ggplot2)   # For data visualization
-library(readr)     # For reading datasets
-library(lattice)   # For lattice-based visualizations
-library(reshape2)  # For reshaping data
-library(dplyr)     # For data manipulation
+library(ggplot2)   
+library(readr)     
+library(lattice)   
+library(reshape2)  
+library(dplyr)     
 library(pander)
 library(knitr)
 library(gridExtra)
+library(GGally)
+library(caret)
 ```
 
 \newpage
@@ -67,7 +69,7 @@ To obtain this structure a preprocessing step was performed, which included the 
 
 
 The code to preprocess the dataset is as follows:
-```{r, eval = FALSE, echo = TRUE}
+
 set.seed(100)
 data <- read_csv(
   paste('../../data/online+shoppers+purchasing+intention+dataset/',
@@ -94,7 +96,7 @@ data <- data %>%
   sample_n(2000)
 
 
-```
+
 
 ## 1.3 Data Integrity
 We begin by assessing the integrity of the dataset by analyzing the presence of missing data across its features. The table below presents the count of missing values for each feature. As shown, there are **no missing values** in any of the features, which indicates that the dataset is complete and does not require any imputation for missing data.
@@ -126,8 +128,8 @@ cat("Number of duplicate rows:", duplicate_rows)
 
 ```{r}
 # Split numeric and categorical variables
-numeric_vars <- data %>% select(where(is.numeric))
-categorical_vars <- data %>% select(where(is.factor))
+numeric_vars <- data %>% dplyr::select(where(is.numeric))
+categorical_vars <- data %>% dplyr::select(where(is.factor))
 ```
 
 ### 2.1.1 Time Related Variables
@@ -252,6 +254,43 @@ for (var_name in names(numeric_vars[, c("BounceRates", "ExitRates", "PageValues"
           horizontal = TRUE)
 }
 ```
+### 2.1.4 Transformations
+
+Given the right-skewed nature of the numeric variables, we decided to try and apply transformation to achive a more normal distribution by reducing the positive skewness. Due to the extreme values and presence of zeros in the data, we opted for the **Box-Cox transformation** along with shifting the data by adding a constant value to avoid issues with zero values. This transformation did not result in a significant improvement in normality, as the original data was already heavily skewed.
+
+The 2 histograms below show a comparison of the original and transformed data for the `ProductRelatedDuration` and `BounceRates` variables. The histograms illustrate that 2 scenarios we observed in all our numerical variables. In one case, the presence of a large number of zero values results in a spike at zero in the transformed data. In the other case, the transformation does not significantly alter the distribution of the data, as the original data is extremely skewed.
+
+It is because of these reasons that we decided to retain the original data for our analysis, as the transformation did not provide a substantial improvement in normality and also reduced the interpretability of the data. The presence of outliers and extreme values in the original data is essential for understanding user behavior and engagement on the website, and we believe that these values should be retained in our analysis.
+
+
+```{r, include=FALSE}
+numeric_vars_shifted <- numeric_vars + 1
+
+print(numeric_vars_shifted)
+
+preProc <- preProcess(numeric_vars_shifted, method = "BoxCox")
+# View the transformed data
+transformed_data <- predict(preProc, newdata = numeric_vars_shifted)
+print(transformed_data)
+```
+
+```{r}
+# Set up the plot layout to show side-by-side histograms
+par(mfrow = c(2, 2))
+# Loop over each column (variable) to plot histograms for both original and transformed data
+for (col in colnames(numeric_vars[,c("ProductRelatedDuration", "BounceRates")])) {
+  # Plot original data
+  hist(numeric_vars[[col]], main = paste("Original", col), 
+       xlab = col, col = "lightblue", border = "black", breaks  = 50)
+
+  # Plot transformed data
+  hist(transformed_data[[col]], main = paste("Transformed", col), 
+       xlab = col, col = "lightgreen", border = "black", breaks = 50)
+}
+
+# Reset plotting layout to default
+par(mfrow = c(1, 1))
+```
 
 ## 2.2 Categorical Variables
 
@@ -331,10 +370,10 @@ grid.arrange(grobs = plots, ncol = 2)
 - **Weekend:**  
   The  binary variable `Weekend` indicates whether the session occurred on a weekend. We observe that around ~23% of the sessions occurred on weekends, while the majority (~77%) took place on weekdays. This distribution suggests that the website receives a higher volume of traffic on weekdays compared to weekends (which also holds if we took the daily average).
   
-- **Revenue:**
+- **Revenue:**  
   The target variable `Revenue` indicates whether a session resulted in a purchase. The dataset is imbalanced, with a higher number of sessions where no purchase (~85%) was made compared to sessions resulting in a purchase (~15%). This imbalance is expected in e-commerce datasets, where the conversion rate is typically lower than the non-conversion rate.
 
-```{r}
+```{r out.width = '70%', out.height = '70%'}
 # Create barplots and store them in a list
 plots <- lapply(names(categorical_vars[, c("Weekend", "Revenue")]), function(var_name) {
   ggplot(categorical_vars, aes(x = .data[[var_name]])) +
@@ -351,6 +390,14 @@ grid.arrange(grobs = plots, ncol = 2)
 
 # 3. Multivariate Analysis
 
+## 3.1 Correlation Analysis
+
+The correlation matrix provides insights into the relationships between the numeric variables in the dataset. The heatmap below visualizes the correlation matrix, with values ranging from -1 to 1. A value of 1 indicates a perfect positive correlation, -1 indicates a perfect negative correlation, and 0 indicates no correlation. We can observe  3 distinct clusters of variables:
+
+- Page Related Variables like `Administrative`, `Informational`, `ProductRelated`, `AdministrativeDuration`, `InformationalDuration` and `ProductRelatedDuration`are moderately positively correlated with each other.  
+- `BounceRates` and `ExitRates` are highly positively correlated with each other and negatively correlated with the rest of the variables.  
+- `PageValues` shows very little to no correlation with the rest of the variables.  
+ 
 ```{r}
 # Compute the correlation matrix
 correlation_matrix <- cor(numeric_vars)
@@ -366,6 +413,31 @@ ggplot(correlation_melted, aes(Var1, Var2, fill = value)) +
   theme_minimal() +  # Clean theme
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate x-ax
 
+```
+
+
+## 3.2 Pairwise Conditional Scatter Plots
+
+This conditional pairwise scatter plots provide a visual representation of the relationships between numeric variables, colored by the `Revenue` variable. We observe what we've already seen in the correlation matrix and in the univariate analysis. We see clearly skewed distributions for all variables due to the nature of the data, and as seen in the correlation matrix, we do not observe any clear linear relationships between the variables except for `BounceRates` and `ExitRates` which are significantly positively correlated between them.
+
+Another interesting observation is that `Revenue` does not seem to have a clear separation between the two classes in the scatter plots. This suggests that the numeric variables alone may not be sufficient to predict the `Revenue` variable. 
+
+```{r, out.width = '100%', out.height = '100%'}
+# Pairwise scatter plots for numeric variables colored by Revenue
+ggpairs(
+  data[, colnames(numeric_vars)], 
+  lower = list(continuous = wrap("points", alpha = 0.5, size = 0.1)),
+  upper = list(continuous = wrap("cor", size = 2)),
+  mapping = aes(color = data$Revenue),
+  title = "Pairwise Conditional Scatter Plots of Numeric Variables"
+  ) + 
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+    axis.text.y = element_text(hjust = 1, size = 6),
+    strip.text.x = element_text(size = 6, angle = -90), 
+    strip.text.y = element_text(size = 6, angle = 0),    
+    axis.text = element_text(size = 6, angle = -45)     
+    )
 ```
 
 ```{r}
