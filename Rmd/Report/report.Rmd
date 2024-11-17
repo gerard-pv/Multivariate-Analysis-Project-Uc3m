@@ -14,10 +14,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, out.height
 ```
 
 ```{r}
-# Load necessary libraries
 library(ggplot2)   
-library(readr)     
-library(lattice)   
 library(reshape2)  
 library(dplyr)     
 library(pander)
@@ -25,6 +22,7 @@ library(knitr)
 library(gridExtra)
 library(GGally)
 library(caret)
+library(tidyr)
 ```
 
 \newpage
@@ -439,6 +437,40 @@ ggpairs(
     axis.text = element_text(size = 6, angle = -45)     
     )
 ```
+## 3.3 Conditional Barplots
+
+The conditional barplots below show the proportion of sessions resulting in a purchase (`Revenue`) for each categorical variable. The plots reveal little variation in the proportion of purchases across different categories within each variable. This suggests that the categorical variables alone may not be sufficient to predict the purchase intent of a session. However, these variables could still provide valuable insights when combined with other features in a predictive model. 
+The only variables that seem to have some variation in the proportion of purchases are `VisitorType`, `Month` and `TrafficType` where some of the categories have a higher proportion of purchases than others. For example, in the `VisitorType` variable, `Returning_Visitor` shows a lower proportion of purchases while the `New_Visitor` category has a higher proportion of purchases.
+
+```{r}
+# Reshape the data into long format
+categorical_vars_long <- categorical_vars %>%
+  pivot_longer(cols = -Revenue, names_to = "Variable", values_to = "Value")
+
+# Create the plot
+ggplot(categorical_vars_long, aes(x = Value, fill = Revenue)) +
+  geom_bar(aes(y = ..prop.., group = Revenue), position = "dodge") +
+  labs(title = "Category Proportions by Revenue", x = "Category", y = "Proportion") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  theme_minimal() +
+  theme(
+    legend.position = "top",  # Shared legend at the top
+    axis.text = element_text(size = 6, angle = 45)  # Adjust axis text size and rotation
+  ) +
+  facet_wrap(~ Variable, scales = "free", ncol = 4)  # Facet by 'Variable' (original column names) with 4 columns
+
+
+```
+
+
+# 4.0 Principal Component Analysis
+
+Principal Component Analysis (PCA) was applied as a way to be able to reduce the dimensionality of the dataset while retaining as much variance as possible. This technique helps in identifying key patterns in the data and visualizing its structure.
+
+## 4.1 Methodology
+
+After the initial data preprocessing and analysis, we've seen that the dataset contains numerical variables with different scales and given the nature of tha data we opted for no transformations as explained previously. Given this situation, our best course of action is to apply PCA to the dataset using the correlation matrix instead of the covariance matrix. This is because the variables have different scales, and using the correlation matrix will standardize the variables to have a mean of 0 and a standard deviation of 1, making them comparable.
+
 
 ```{r}
 # PCA with R built in function
@@ -468,12 +500,13 @@ Lambda_sorted
 # Show the eigenvectors
 T_sorted
 
-
-
 ```
 
+# 5. Packages and Tools
+
+The analysis was performed using **R**, with the report generated in **RMarkdown**. For data wrangling, the `dplyr` and `reshape2` libraries were utilized. Visualizations were created using `ggplot2`, `GGally`, and `gridExtra`. The report was compiled and formatted with `knitr` and `pander`, while `caret` was employed for the Principal Component Analysis.
 
 
-# 5. References
+# 6. References
 
 - UCI Machine Learning Repository. (n.d.). **Online Shoppers Purchasing Intention Dataset**. Retrieved from [https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset](https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset).
