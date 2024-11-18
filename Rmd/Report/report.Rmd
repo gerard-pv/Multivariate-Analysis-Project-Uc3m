@@ -23,6 +23,7 @@ library(gridExtra)
 library(GGally)
 library(caret)
 library(tidyr)
+library(kableExtra)
 ```
 
 \newpage
@@ -465,42 +466,113 @@ ggplot(categorical_vars_long, aes(x = Value, fill = Revenue)) +
 
 # 4.0 Principal Component Analysis
 
-Principal Component Analysis (PCA) was applied as a way to be able to reduce the dimensionality of the dataset while retaining as much variance as possible. This technique helps in identifying key patterns in the data and visualizing its structure.
+Principal Component Analysis (PCA) was applied to reduce the dimensionality of the dataset while retaining as much variance as possible. This technique is instrumental in identifying key patterns in the data and visualizing its underlying structure.
 
 ## 4.1 Methodology
 
-After the initial data preprocessing and analysis, we've seen that the dataset contains numerical variables with different scales and given the nature of tha data we opted for no transformations as explained previously. Given this situation, our best course of action is to apply PCA to the dataset using the correlation matrix instead of the covariance matrix. This is because the variables have different scales, and using the correlation matrix will standardize the variables to have a mean of 0 and a standard deviation of 1, making them comparable.
+After initial data preprocessing and analysis, we observed that the dataset contains numerical variables with differing scales. Given the nature of the data, we opted not to apply additional transformations, as explained previously. To address the issue of differing scales, we applied PCA using the correlation matrix instead of the covariance matrix. This approach standardizes the variables to have a mean of 0 and a standard deviation of 1, ensuring comparability across variables.
 
+While we previously noted that the numerical variables are not highly correlated pairwise, it is also valuable to evaluate intercorrelation measures for the entire dataset. PCA performs optimally when the data exhibits strong intercorrelation, so these measures will provide insight into how effective PCA is likely to be for this dataset.
 
 ```{r}
-# PCA with R built in function
+intercorrelations <- function(X) {
+  n <- nrow(X)
+  p <- ncol(X)
+  R <- cor(X)  
+  q <- numeric(6)
+  lambda <- eigen(R)$values
+  rjj <- diag(solve(R))
+  
+  q[1] <- (1 - min(lambda) / max(lambda))^(p + 2)
+  q[2] <- 1 - p / sum(1 / lambda)
+  q[3] <- 1 - sqrt(det(R))
+  q[4] <- (max(lambda) / p)^(3 / 2)
+  q[5] <- (1 - min(lambda) / p)^5
+  q[6] <- sum((1 - 1 / rjj) / p)
+  
+  results <- data.frame(
+    Measure = c(
+      "Multivariate Dispersion",
+      "KMO-like Measure",
+      "Bartlett’s Determinant Test",
+      "Multivariate Kurtosis",
+      "Multicollinearity Index",
+      "Average Variable Dependency"
+    ),
+    Value = q
+  )
+  
+  pander(
+    results,
+    caption = "Intercorrelation Measures",
+    justify = "left"
+  )
+  
+}
+```
+
+```{r}
+intercorrelations(numeric_vars)
+```
+
+The intercorrelation measures indicate that the dataset exhibits moderate to high intercorrelation among variables. This suggests that applying PCA is appropriate, as it will effectively reduce dimensionality while preserving most of the variance in the data. The results highlight a sufficient level of correlation to justify PCA, with some redundancy among variables that PCA can address.
+
+## 4.2 Results
+
+The following table displays the principal components along with the variance explained by each component. The first principal component explains the highest proportion of variance, followed by subsequent components. 
+
+\scriptsize
+```{r, out.width = '70%', out.height = '70%'}
+# Perform PCA
 pca <- prcomp(numeric_vars, center = TRUE, scale. = TRUE)
-pca$rotation
-```
 
-```{r}
-# PCA step by step
+# Calculate variance explained by each principal component
+explained_variance <- pca$sdev^2
+variance_explained <- explained_variance / sum(explained_variance) * 100
 
-eig_result <- eigen(correlation_matrix)
+# Create a new row with the variance explained
+variance_row <- c(variance_explained)
 
-# Get the eigenvalues and eigenvectors
-Lambda <- eig_result$values  # Eigenvalues
-T <- eig_result$vectors      # Eigenvectors
+# Add the row to the PCA rotation table
+pca_table <- rbind(pca$rotation, "Variance Explained" = variance_row)
 
-# Sort eigenvalues and eigenvectors in descending order
-sorted_indices <- order(Lambda, decreasing = TRUE)  # Indices for sorting
+# Create kable table and highlight the last row
+kable(pca_table, caption = "Principal Components with Variance Explained", align = "l", digits = 4) %>%
+  kable_styling() %>%
+  row_spec(nrow(pca_table), bold = TRUE) %>%
+  row_spec(nrow(pca_table) - 1,  extra_latex_after = "\\hline \\hline")
 
-# Apply the sorting
-Lambda_sorted <- Lambda[sorted_indices]  # Sorted eigenvalues
-T_sorted <- T[, sorted_indices]          # Sorted eigenvectors
 
-# Show the sorted eigenvalues
-Lambda_sorted
-
-# Show the eigenvectors
-T_sorted
 
 ```
+\normalsize
+```{r, eval=FALSE}
+# # PCA step by step
+# eig_result <- eigen(correlation_matrix)
+# 
+# # Get the eigenvalues and eigenvectors
+# Lambda <- eig_result$values  # Eigenvalues
+# T <- eig_result$vectors      # Eigenvectors
+# 
+# # Sort eigenvalues and eigenvectors in descending order
+# sorted_indices <- order(Lambda, decreasing = TRUE)  # Indices for sorting
+# 
+# # Apply the sorting
+# Lambda_sorted <- Lambda[sorted_indices]  # Sorted eigenvalues
+# T_sorted <- T[, sorted_indices]          # Sorted eigenvectors
+# 
+# # Show the sorted eigenvalues
+# Lambda_sorted
+# 
+# # Show the eigenvectors
+# T_sorted
+
+```
+
+## 4.3 Principal Component Selection
+
+
+
 
 # 5. Packages and Tools
 
