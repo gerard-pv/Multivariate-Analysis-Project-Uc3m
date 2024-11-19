@@ -1,16 +1,15 @@
 ---
-title: "Dataset Description and PCA Analysis"
-author: "Your Name"
+title: "Analysis of Online Shopping Behavior"
+author: "Despoina Iapona & Gerard Palomo"
 output:
   pdf_document:
     toc: true
     toc_depth: 3
-
 date: "`r Sys.Date()`"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, out.height = '80%', out.width = '80%', fig.align = "center", comment = "#>")
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, out.height = '70%', out.width = '70%', fig.align = "center", comment = "#>")
 ```
 
 ```{r}
@@ -69,6 +68,7 @@ To obtain this structure a preprocessing step was performed, which included the 
 
 The code to preprocess the dataset is as follows:
 
+```{r, eval=FALSE, echo=TRUE}
 set.seed(100)
 data <- read_csv(
   paste('../../data/online+shoppers+purchasing+intention+dataset/',
@@ -93,7 +93,7 @@ data <- data %>%
     ProductRelatedDuration = ProductRelated_Duration
   ) %>% 
   sample_n(2000)
-
+```
 
 
 
@@ -397,7 +397,7 @@ The correlation matrix provides insights into the relationships between the nume
 - `BounceRates` and `ExitRates` are highly positively correlated with each other and negatively correlated with the rest of the variables.  
 - `PageValues` shows very little to no correlation with the rest of the variables.  
  
-```{r}
+```{r, out.width = '90%', out.height = '90%'}
 # Compute the correlation matrix
 correlation_matrix <- cor(numeric_vars)
 
@@ -464,7 +464,7 @@ ggplot(categorical_vars_long, aes(x = Value, fill = Revenue)) +
 ```
 
 
-# 4.0 Principal Component Analysis
+# 4. Principal Component Analysis
 
 Principal Component Analysis (PCA) was applied to reduce the dimensionality of the dataset while retaining as much variance as possible. This technique is instrumental in identifying key patterns in the data and visualizing its underlying structure.
 
@@ -519,10 +519,12 @@ The intercorrelation measures indicate that the dataset exhibits moderate to hig
 
 ## 4.2 Results
 
-The following table displays the principal components along with the variance explained by each component. The first principal component explains the highest proportion of variance, followed by subsequent components. 
+The following table displays the principal components along with the variance explained by each component. The first principal component explains the highest proportion of variance, followed by subsequent components. We observe how the 1st and 2nd component explain more than half of the variance in the data, indicating that these components capture the most significant patterns in the dataset. The subsequent components explain less but still a significant amount of variance. 
+
+If we analyize more closely the first principal component we can get some insights from it. All variables except `BounceRates` (-0.2501) and `ExitRates` (0.2902) have positive coefficients. The variables with the highest coefficients are `ProductRelated` (0.4174) and  `ProductRelatedDuration` (0.4171), indicating that these variables contribute the most to the first principal component. This suggests that user interactions with product-related pages is a key factor in explaining the variance in the dataset. On the other side, `PageValues` has a very low coefficient (0.0761), indicating that it's impact on the first principal component is relatively low compared to the other variables.
 
 \scriptsize
-```{r, out.width = '70%', out.height = '70%'}
+```{r}
 # Perform PCA
 pca <- prcomp(numeric_vars, center = TRUE, scale. = TRUE)
 
@@ -571,14 +573,43 @@ kable(pca_table, caption = "Principal Components with Variance Explained", align
 
 ## 4.3 Principal Component Selection
 
+The primary objective of PCA is to reduce the dimensionality of the dataset while retaining as much variance as possible. There are several methods to determine the number of principal components to retain, such as the **Kaiser criterion**, **scree plot**, and **cumulative variance explained**. Our dataset only contains 9 numerical variables so the tradeoff between the number of components and the variance explained is not as critical as in datasets with a larger number of variables. Losing some variance in exchange for a simpler model may not be worth it in this case.
+
+That said, our original dataset contained more than 12,000 records, so maybe losing some variance in exchange for a smaller model could be worth it in terms of computational efficiency when working with the full dataset. In this case we could fix some threshold for the cumulative variance explained and select the number of components that meet that threshold. As we mentioned before, dimensional reduction is not as critical in this case, so we will fix a relatively high threshold of 95% of variance explained. 
+
+```{r}
+cumsum_variance <- cumsum(variance_explained)
+
+ggplot(data = data.frame(Principal_Component = 1:length(variance_explained), 
+                         Cumulative_Variance = cumsum_variance), 
+       aes(x = Principal_Component, y = Cumulative_Variance)) +
+  geom_line(color = "blue") +
+  geom_point(color = "red", alpha = 0.6) +
+  scale_x_continuous(breaks = 1:9) + # Note the added "+" here
+  labs(title = "Cumulative Variance Explained by Principal Components", 
+       x = "Principal Component", 
+       y = "Cumulative Variance Explained (%)") +
+  geom_line(aes(x = Principal_Component, y = 95), linetype = "dashed", color = "red") + 
+  geom_point(aes(x = 7, y = cumsum_variance[7]), color = "red", size = 5) +
+  theme_minimal()
+```
+The threshold of 95% of variance explained is reached by taking the seven first principal components. This means that these seven components capture at least 95% of the variance in the dataset.
 
 
+# Packages and Tools
 
-# 5. Packages and Tools
-
-The analysis was performed using **R**, with the report generated in **RMarkdown**. For data wrangling, the `dplyr` and `reshape2` libraries were utilized. Visualizations were created using `ggplot2`, `GGally`, and `gridExtra`. The report was compiled and formatted with `knitr` and `pander`, while `caret` was employed for the Principal Component Analysis.
+The analysis was performed using **R**, with the report generated in **RMarkdown**. For data wrangling, the `dplyr`, `reshape2` and `tidyr` libraries were utilized. Visualizations were created using `ggplot2`, `GGally`, and `gridExtra`. The report was compiled and formatted with `knitr`, `pander` and `kableExtra`, while `caret` was employed for the Principal Component Analysis. 
 
 
-# 6. References
+# References
 
-- UCI Machine Learning Repository. (n.d.). **Online Shoppers Purchasing Intention Dataset**. Retrieved from [https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset](https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset).
+UCI Machine Learning Repository. (n.d.). *Online Shoppers Purchasing Intention Dataset*. Retrieved from [https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset](https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset).
+
+Grané, A. (2024). *Multivariate Analysis: 1. Multidimensional Datasets*. Master in Statistics for Data Science, Universidad Carlos III de Madrid. Retrieved from [aurea.grane@uc3m.es](mailto:aurea.grane@uc3m.es). Licensed under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0.
+
+Grané, A. (2024). *Multivariate Analysis: 2. Principal Component Analysis (PCA)*. Master in Statistics for Data Science, Universidad Carlos III de Madrid. Retrieved from [aurea.grane@uc3m.es](mailto:aurea.grane@uc3m.es). Licensed under Creative Commons Attribution-NonCommercial-NoDerivatives 4.0.
+
+Yihui, X. (2018). *R Markdown Cookbook*. Retrieved from [https://bookdown.org/yihui/rmarkdown-cookbook/](https://bookdown.org/yihui/rmarkdown-cookbook/).
+
+R Graph Gallery. (n.d.). *R Graph Gallery: A collection of graphs made with R*. Retrieved from [https://www.r-graph-gallery.com/](https://www.r-graph-gallery.com/).
+
