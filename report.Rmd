@@ -137,7 +137,7 @@ categorical_vars <- data %>% dplyr::select(where(is.factor))
 
 ### 2.1.1 Time Related Variables
 
-The duration variables (e.g., `AdministrativeDuration`, `InformationalDuration`, `ProductRelatedDuration`) exhibit values for the mean significantly higher than the median, indicating a heavily right-skewed distribution. This suggests that there are a few sessions with very high durations that are pulling the mean upwards. The range of values for these variables is quite large, with the maximum values being several times higher than the 75th percentile. 
+The duration variables (e.g., `AdministrativeDuration`, `InformationalDuration`, `ProductRelatedDuration`) exhibit values for the mean significantly higher than the median, indicating a heavily right-skewed distribution. This suggests that there are a few sessions with very high duration that are pulling the mean upwards. The range of values for these variables is quite large, with the maximum values being several times higher than the 75th percentile. 
 ```{r, out.width = '100%', out.height = '100%'}
 # Summarize numeric variables
 numeric_summary <- summary(numeric_vars[, c("AdministrativeDuration", "InformationalDuration", "ProductRelatedDuration")])
@@ -147,7 +147,7 @@ pander(numeric_summary, caption = "Summary of Numeric Time Related Variables", s
 
 ```
 
-The boxplots and histograms provide clear evidence of the right-skewed nature of these variables, characterized by a high concentration of values near zero and a long tail of extreme values. This distribution highlights the presence of numerous outliers, which are not isolated anomalies but rather a significant portion of the data. These extreme values likely represent important behavioral patterns or user interactions that could offer valuable insights. Therefore, instead of removing or treating them as noise, we choose to retain these outliers in our analysis to ensure a comprehensive understanding of the dataset and its implications.
+The box plots and histograms provide clear evidence of the right-skewed nature of these variables, characterized by a high concentration of values near zero and a long tail of extreme values. This distribution highlights the presence of numerous outliers, which are not isolated anomalies but rather a significant portion of the data. These extreme values likely represent important behavioral patterns or user interactions that could offer valuable insights. Therefore, instead of removing or treating them as noise, we choose to retain these outliers in our analysis to ensure a comprehensive understanding of the dataset and its implications.
 
 ```{r, out.height = '100%', out.width = '100%'}
 # Set layout for 3 rows and 3 columns (9 plots per page)
@@ -163,7 +163,7 @@ for (var_name in names(numeric_vars[, c("AdministrativeDuration", "Informational
        col = "lightgreen", 
        breaks = 50)
   
-  # Boxplot
+  # Box plot
   boxplot(numeric_vars[[var_name]], 
           main = paste(var_name), 
           ylab = var_name, 
@@ -184,7 +184,7 @@ pander(numeric_summary, caption = "Summary of Page Interaction Variables", style
 
 ```
 
-The boxplots and histograms for these variables confirm the right-skewed distribution, with a large number of sessions having low page interaction counts and a few sessions with very high counts. While all three variables exhibit similar patterns, the `Informational` variable has a more pronounced skewness, followed by `ProductRelated` and `Administrative`. The presence of outliers in these variables is expected, as user behavior can vary significantly, with some users exploring multiple pages while others may exit quickly after viewing a few pages. We believe this outlier behavior is essential for understanding user engagement and purchase intent and should be retained in the analysis.
+The box plots and histograms for these variables confirm the right-skewed distribution, with a large number of sessions having low page interaction counts and a few sessions with very high counts. While all three variables exhibit similar patterns, the `Informational` variable has a more pronounced skewness, followed by `ProductRelated` and `Administrative`. The presence of outliers in these variables is expected, as user behavior can vary significantly, with some users exploring multiple pages while others may exit quickly after viewing a few pages. We believe this outlier behavior is essential for understanding user engagement and purchase intent and should be retained in the analysis.
 
 
 ```{r, out.height = '100%', out.width = '100%'}
@@ -201,7 +201,7 @@ for (var_name in names(numeric_vars[, c("Administrative", "Informational", "Prod
        col = "lightgreen", 
        breaks = 50)
   
-  # Boxplot
+  # Box plot
   boxplot(numeric_vars[[var_name]], 
           main = paste(var_name), 
           ylab = var_name, 
@@ -231,7 +231,7 @@ pander(numeric_summary, caption = "Summary of Page Interaction Variables", style
 ```
 \vspace{0.3cm}
 
-The visualizations for these variables further confirm the right-skewed distribution, with a concentration of low values and a few high values. The histograms and boxplots provide a clear representation of the distribution of these variables, highlighting the presence of outliers and the need to consider these extreme values in the analysis. We've observed outliers in all variables which may suggest specific user behaviors or interactions that could be crucial for understanding purchasing intent and user engagement on the website. As done with other variables, we choose to retain these outliers in our analysis to ensure a comprehensive understanding of the dataset.
+The visualizations for these variables further confirm the right-skewed distribution, with a concentration of low values and a few high values. The histograms and box plots provide a clear representation of the distribution of these variables, highlighting the presence of outliers and the need to consider these extreme values in the analysis. We've observed outliers in all variables which may suggest specific user behaviors or interactions that could be crucial for understanding purchasing intent and user engagement on the website. As done with other variables, we choose to retain these outliers in our analysis to ensure a comprehensive understanding of the dataset.
 
 \vspace{0.3cm}
 
@@ -249,7 +249,7 @@ for (var_name in names(numeric_vars[, c("BounceRates", "ExitRates", "PageValues"
        col = "lightgreen", 
        breaks = 50)
   
-  # Boxplot
+  # Box plot
   boxplot(numeric_vars[[var_name]], 
           main = paste(var_name), 
           ylab = var_name, 
@@ -259,9 +259,9 @@ for (var_name in names(numeric_vars[, c("BounceRates", "ExitRates", "PageValues"
 ```
 ### 2.1.4 Transformations
 
-Given the right-skewed nature of the numeric variables, we decided to try and apply transformation to achive a more normal distribution by reducing the positive skewness. Due to the extreme values and presence of zeros in the data, we opted for the **Box-Cox transformation** along with shifting the data by adding a constant value to avoid issues with zero values. This transformation did not result in a significant improvement in normality, as the original data was already heavily skewed.
+Given the right-skewed nature of the numeric variables, we decided to try and apply transformation to achieve a more normal distribution by reducing the positive skewness. Due to the extreme values and presence of zeros in the data, we opted for the **Box-Cox transformation** along with shifting the data by adding a constant value to avoid issues with zero values. This transformation did not result in a significant improvement in normality, as the original data was already heavily skewed.
 
-The 2 histograms below show a comparison of the original and transformed data for the `ProductRelatedDuration` and `BounceRates` variables. The histograms illustrate that 2 scenarios we observed in all our numerical variables. In one case, the presence of a large number of zero values results in a spike at zero in the transformed data. In the other case, the transformation does not significantly alter the distribution of the data, as the original data is extremely skewed.
+The 2 histograms below show a comparison of the original and transformed data for the `ProductRelatedDuration` and `BounceRates` variables. The histograms illustrate that 2 scenarios we observed in all our numerical variables. In one case, the presence numerous of zero values results in a spike at zero in the transformed data. In the other case, the transformation does not significantly alter the distribution of the data, as the original data is extremely skewed.
 
 It is because of these reasons that we decided to retain the original data for our analysis, as the transformation did not provide a substantial improvement in normality and also reduced the interpretability of the data. The presence of outliers and extreme values in the original data is essential for understanding user behavior and engagement on the website, and we believe that these values should be retained in our analysis.
 
@@ -310,7 +310,7 @@ par(mfrow = c(1, 1))
 # Summarize categorical variables
 categorical_summary <- summary(categorical_vars[, c("VisitorType", "Region")])
 
-# Create barplots and store them in a list
+# Create bar plots and store them in a list
 plots <- lapply(names(categorical_vars[, c("VisitorType", "Region")]), function(var_name) {
   ggplot(categorical_vars, aes(x = .data[[var_name]])) +
     geom_bar(fill = "lightblue") +
@@ -333,7 +333,7 @@ grid.arrange(grobs = plots, ncol = 2)
   Operating System **2** dominates usage, followed by Operating System **1**. Other operating systems have a minor presence, highlighting user preference for a few dominant operating systems.
 
 ```{r}
-# Create barplots and store them in a list
+# Create bar plots and store them in a list
 plots <- lapply(names(categorical_vars[, c("Browser", "OperatingSystems")]), function(var_name) {
   ggplot(categorical_vars, aes(x = .data[[var_name]])) +
     geom_bar(fill = "lightblue") +
@@ -355,7 +355,7 @@ grid.arrange(grobs = plots, ncol = 2)
   TrafficType **2** is the primary source of traffic, with a significant lead over TrafficType **1**. Other TrafficTypes contribute marginally, indicating that a few referral sources or marketing channels drive the majority of traffic.
 
 ```{r}
-# Create barplots and store them in a list
+# Create bar plots and store them in a list
 plots <- lapply(names(categorical_vars[, c("Month", "TrafficType")]), function(var_name) {
   ggplot(categorical_vars, aes(x = .data[[var_name]])) +
     geom_bar(fill = "lightblue") +
@@ -377,7 +377,7 @@ grid.arrange(grobs = plots, ncol = 2)
   The target variable `Revenue` indicates whether a session resulted in a purchase. The dataset is imbalanced, with a higher number of sessions where no purchase (~85%) was made compared to sessions resulting in a purchase (~15%). This imbalance is expected in e-commerce datasets, where the conversion rate is typically lower than the non-conversion rate.
 
 ```{r out.width = '70%', out.height = '70%'}
-# Create barplots and store them in a list
+# Create bar plots and store them in a list
 plots <- lapply(names(categorical_vars[, c("Weekend", "Revenue")]), function(var_name) {
   ggplot(categorical_vars, aes(x = .data[[var_name]])) +
     geom_bar(fill = "lightblue") +
@@ -395,7 +395,7 @@ grid.arrange(grobs = plots, ncol = 2)
 
 ## 3.1 Correlation Analysis
 
-The correlation matrix provides insights into the relationships between the numeric variables in the dataset. The heatmap below visualizes the correlation matrix, with values ranging from -1 to 1. A value of 1 indicates a perfect positive correlation, -1 indicates a perfect negative correlation, and 0 indicates no correlation. We can observe  3 distinct clusters of variables:
+The correlation matrix provides insights into the relationships between the numeric variables in the dataset. The heat map below visualizes the correlation matrix, with values ranging from -1 to 1. A value of 1 indicates a perfect positive correlation, -1 indicates a perfect negative correlation, and 0 indicates no correlation. We can observe  3 distinct clusters of variables:
 
 - Page Related Variables like `Administrative`, `Informational`, `ProductRelated`, `AdministrativeDuration`, `InformationalDuration` and `ProductRelatedDuration`are moderately positively correlated with each other.  
 - `BounceRates` and `ExitRates` are highly positively correlated with each other and negatively correlated with the rest of the variables.  
@@ -407,9 +407,9 @@ correlation_matrix <- cor(numeric_vars)
 
 correlation_melted <- melt(correlation_matrix)
 
-# Heatmap of the correlation matrix with values
+# Heat map of the correlation matrix with values
 ggplot(correlation_melted, aes(Var1, Var2, fill = value)) +
-  geom_tile() +  # Create the heatmap tiles
+  geom_tile() +  # Create the heat map tiles
   geom_text(aes(label = round(value, 2)), color = "black", size = 3) +  # Add the correlation values inside the tiles
   scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1, 1)) +  # Color scale
   labs(title = "Correlation Matrix Heatmap", x = "Variables", y = "Variables") +  # Title and labels
@@ -444,7 +444,7 @@ ggpairs(
 ```
 ## 3.3 Conditional Barplots
 
-The conditional barplots below show the proportion of sessions resulting in a purchase (`Revenue`) for each categorical variable. The plots reveal little variation in the proportion of purchases across different categories within each variable. This suggests that the categorical variables alone may not be sufficient to predict the purchase intent of a session. However, these variables could still provide valuable insights when combined with other features in a predictive model. 
+The conditional bar plots below show the proportion of sessions resulting in a purchase (`Revenue`) for each categorical variable. The plots reveal little variation in the proportion of purchases across different categories within each variable. This suggests that the categorical variables alone may not be sufficient to predict the purchase intent of a session. However, these variables could still provide valuable insights when combined with other features in a predictive model. 
 The only variables that seem to have some variation in the proportion of purchases are `VisitorType`, `Month` and `TrafficType` where some of the categories have a higher proportion of purchases than others. For example, in the `VisitorType` variable, `Returning_Visitor` shows a lower proportion of purchases while the `New_Visitor` category has a higher proportion of purchases.
 
 ```{r}
@@ -525,7 +525,7 @@ The intercorrelation measures indicate that the dataset exhibits moderate to hig
 
 The following table displays the principal components along with the variance explained by each component. The first principal component explains the highest proportion of variance, followed by subsequent components. We observe how the 1st and 2nd component explain more than half of the variance in the data, indicating that these components capture the most significant patterns in the dataset. The subsequent components explain less but still a significant amount of variance. 
 
-If we analyize more closely the first principal component we can get some insights from it. All variables except `BounceRates` (-0.2501) and `ExitRates` (0.2902) have positive coefficients. The variables with the highest coefficients are `ProductRelated` (0.4174) and  `ProductRelatedDuration` (0.4171), indicating that these variables contribute the most to the first principal component. This suggests that user interactions with product-related pages is a key factor in explaining the variance in the dataset. On the other side, `PageValues` has a very low coefficient (0.0761), indicating that it's impact on the first principal component is relatively low compared to the other variables.
+If we analyze more closely the first principal component we can get some insights from it. All variables except `BounceRates` (-0.2501) and `ExitRates` (0.2902) have positive coefficients. The variables with the highest coefficients are `ProductRelated` (0.4174) and  `ProductRelatedDuration` (0.4171), indicating that these variables contribute the most to the first principal component. This suggests that user interactions with product-related pages is a key factor in explaining the variance in the dataset. On the other side, `PageValues` has a very low coefficient (0.0761), indicating that it's impact on the first principal component is relatively low compared to the other variables.
 
 \scriptsize
 ```{r}
