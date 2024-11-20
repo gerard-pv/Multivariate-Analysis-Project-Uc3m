@@ -8,9 +8,11 @@ output:
 date: "`r Sys.Date()`"
 ---
 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, out.height = '70%', out.width = '70%', fig.align = "center", comment = "#>")
 ```
+
 
 ```{r}
 library(ggplot2)   
@@ -24,6 +26,7 @@ library(caret)
 library(tidyr)
 library(kableExtra)
 ```
+
 
 \newpage
 # 1. Dataset Description
@@ -71,7 +74,7 @@ The code to preprocess the dataset is as follows:
 ```{r, eval=FALSE, echo=TRUE}
 set.seed(100)
 data <- read_csv(
-  paste('../../data/online+shoppers+purchasing+intention+dataset/',
+  paste('/data/online+shoppers+purchasing+intention+dataset/',
         'online_shoppers_intention.csv', sep = '')
 )
 
@@ -105,7 +108,8 @@ Additionally, we check for duplicate records in the dataset. The analysis reveal
 Given the absence of missing values and the limited number of duplicate rows, the dataset does not require any further cleaning or preprocessing steps before proceeding with our initial analysis.
 
 ```{r}
-data <- readRDS('../../data/R_datasets/processed_dataset.rds')
+data <- readRDS('data/R_datasets/processed_dataset.rds')
+
 
 # Checking for missing values
 missing_values <- sapply(data, function(x) sum(is.na(x)))
@@ -612,4 +616,7 @@ Grané, A. (2024). *Multivariate Analysis: 2. Principal Component Analysis (PCA)
 Yihui, X. (2018). *R Markdown Cookbook*. Retrieved from [https://bookdown.org/yihui/rmarkdown-cookbook/](https://bookdown.org/yihui/rmarkdown-cookbook/).
 
 R Graph Gallery. (n.d.). *R Graph Gallery: A collection of graphs made with R*. Retrieved from [https://www.r-graph-gallery.com/](https://www.r-graph-gallery.com/).
+
+
+
 

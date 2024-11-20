@@ -1,4 +1,0 @@
-- PCA was computed with correlation matrix because as seen in the dataset description, variables have different measures and scales, which produces large differences between their variances. This though has some drawbacks as we loose some interpretability as we loose the actual scale of the variance in the original dataset.
-- As the task has no objective like dimensionality reduction or whatever, it would be better to achieve a really high percentage of explained variability, which would be using the 5 or 6 first principal components (I think it's around 99% of explained variability)
- 
-
