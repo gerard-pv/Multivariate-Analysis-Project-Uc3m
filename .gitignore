@@ -4,3 +4,5 @@
 *.Rproj
 *.Rhistory
 *.RData
+report2_cache/
+report2_files/

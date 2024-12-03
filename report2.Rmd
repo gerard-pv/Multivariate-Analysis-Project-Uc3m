@@ -1,0 +1,206 @@
+---
+title: "Analysis of Online Shopping Behavior"
+author: "Despoina Iapona & Gerard Palomo"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+date: "`r Sys.Date()`"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, out.height = '70%', out.width = '70%', fig.align = "center", comment = "#>")
+```
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(cluster)
+library(reshape2)
+library(Rcpp)
+library(gridExtra)
+```
+
+
+```{r, include=FALSE}
+# Import data
+data <- readRDS('data/R_datasets/processed_dataset.rds')
+
+# Data wrangling
+data <- data %>% 
+  mutate(
+    Weekend = as.numeric(as.character(Weekend)),
+    Revenue = as.numeric(as.character(Revenue)),
+    SpecialDay = as.numeric(SpecialDay),
+    VisitorType = as.numeric(VisitorType),
+    Month = as.numeric(Month),
+    OperatingSystems = as.numeric(as.character(OperatingSystems)),
+    Browser = as.numeric(as.character(Browser)),
+    Region = as.numeric(as.character(Region)),
+    TrafficType = as.numeric(as.character(TrafficType))
+  ) %>%
+  .[, c(
+    "Administrative", "AdministrativeDuration", "Informational", "InformationalDuration", 
+    "ProductRelated", "ProductRelatedDuration", "BounceRates", "ExitRates", "PageValues", 
+    "Weekend", "Revenue", "SpecialDay", "Month", "OperatingSystems", "Browser", "Region", 
+    "TrafficType", "VisitorType"
+  )] %>%
+  sample_n(1000)  # Randomly sample 1000 observations
+
+str(data)
+```
+
+```{r}
+continuous_data = data[, c(
+  "Administrative", "AdministrativeDuration", "Informational", "InformationalDuration", 
+  "ProductRelated", "ProductRelatedDuration", "BounceRates", "ExitRates", "PageValues"
+)]
+binary_data = data[, c("Weekend", "Revenue")]
+categorical_data = data[, c("SpecialDay", "Month", "OperatingSystems", "Browser", "Region", "TrafficType", "VisitorType")]
+```
+
+# Multidimenional Scaling
+
+Multidimensional Scaling (MDS) is a powerful technique used to visualize complex data by arranging points in a low-dimensional Euclidean space. Unlike Principal Component Analysis (PCA), which works on raw data, MDS operates on a **distance matrix**, making it suitable for various types of data, including binary, categorical, and quantitative.
+
+The goal of MDS is to find a configuration of points in a lower-dimensional space that best preserves the pairwise distances from the original distance matrix. This allows us to visually explore the relationships between observations in a way that is easier to interpret.
+
+### **Advantages of MDS:**
+- Works with any type of data as long as a distance measure can be computed.
+- Provides a clear visual representation of complex relationships in the data.
+
+### **Challenges:**
+- Interpreting the principal coordinates can be more difficult than in PCA.
+- MDS can be computationally expensive for large datasets.
+
+MDS is particularly useful when we only have distance information and want to understand the structure of the data without needing to rely on raw feature values. In this section, we will apply MDS to our dataset to uncover its underlying patterns.
+
+## Distance Metrics
+
+When applying Multidimensional Scaling (MDS), selecting the appropriate distance metric is crucial because it directly impacts the MDS configuration and how relationships between data points are interpreted.
+
+Different distance metrics capture different aspects of similarity or dissimilarity, which leads to varying representations of the data in the low-dimensional space. An inappropriate distance metric can distort these relationships, resulting in misleading conclusions.
+
+For example, using **Euclidean distance** on a dataset with both quantitative and qualitative variables may not reflect the true dissimilarities, as it assumes continuous and scale-invariant data. In such cases, a metric like **Gower’s distance**, which can handle mixed data types, would be more appropriate.
+
+### Why the Right Distance Metric Matters:
+- **Data Type Compatibility:**
+  - **Euclidean distance** is ideal for continuous, quantitative data.
+  - **Matching coefficients** are used for binary data.
+  - **Gower’s distance** is versatile, handling quantitative, binary, and categorical data.
+
+- **Scale Invariance:**
+  - **Euclidean distance** is **not scale-invariant**, meaning larger-scaled variables influence the distance more.
+  - **Mahalanobis distance** is **scale-invariant**, adjusting for variance and correlations between variables.
+
+
+### Comparison of Distance Metrics
+
+#### Continuous Data
+```{r, cache = TRUE}
+# Euclidean distance
+d_euclidean <- as.matrix(dist(continuous_data, method = "euclidean"))
+
+# Manhattan distance
+d_manhattan <- as.matrix(dist(continuous_data, method = "manhattan"))
+
+# Canberra distance
+d_canberra <- as.matrix(dist(continuous_data, method = "canberra"))
+
+# Mahalanobis distance
+sourceCpp("scripts/mahalanobis_dist.cpp")
+D <- maha(as.matrix(continuous_data))
+```
+
+```{r, cache = TRUE}
+# Plot the distance matrices in heatmaps using ggplot
+p1 <- ggplot(melt(d_euclidean[1:500,1:500]), aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  theme_minimal() +
+  labs(title = "Euclidean distance") +
+  theme(legend.position = "none")
+
+p2 <- ggplot(melt(d_manhattan[1:500,1:500]), aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  theme_minimal() +
+  labs(title = "Manhattan distance") +
+  theme(legend.position = "none")
+
+p3 <- ggplot(melt(d_canberra[1:500,1:500]), aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  theme_minimal() +
+  labs(title = "Canberra distance") +
+  theme(legend.position = "none")
+
+p4 <- ggplot(melt(D[1:500,1:500]), aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  theme_minimal() +
+  labs(title = "Mahalanobis distance") +
+  theme(legend.position = "none")
+```
+
+```{r, cache = TRUE}
+# Set up a 2x2 layout for the plots
+grid.arrange(p1, p2, p3, p4, ncol = 2)
+```
+
+#### Binary Data
+
+```{r}
+# Jaccard distance
+d_jaccard <- as.matrix(dist(binary_data, method = "binary"))
+
+# Sokal-Michener distance
+sokal_michener <- function(data) {
+  n <- nrow(data)
+  dist_matrix <- matrix(0, n, n)  # Initialize distance matrix
+  
+  for (i in 1:n) {
+    for (j in i:n) {
+      # Compare the two rows
+      matches <- sum(data[i, ] == data[j, ])
+      total <- ncol(data)
+      distance <- 1 - (matches / total)
+      
+      # Fill the symmetric matrix
+      dist_matrix[i, j] <- distance
+      dist_matrix[j, i] <- distance
+    }
+  }
+  
+  return(as.dist(dist_matrix))  # Return as a distance object
+}
+
+d_sokal_michener <- as.matrix(sokal_michener(as.matrix(binary_data)))
+```
+
+
+```{r, cache = TRUE}
+# Plot the distance matrices in heatmaps using ggplot
+p1 = ggplot(melt(d_jaccard[1:500,1:500]), aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  theme_minimal() +
+  labs(title = "Jaccard distance")
+
+p2 = ggplot(melt(d_sokal_michener[1:500,1:500]), aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  theme_minimal() +
+  labs(title = "Sokal-Michener distance")
+
+# Set up a 1x2 layout for the plots
+grid.arrange(p1, p2, ncol = 2)
+
+```
+
+
+#### Categorical Data
+
+
