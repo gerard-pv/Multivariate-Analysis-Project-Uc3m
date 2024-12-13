@@ -21,6 +21,7 @@ library(cluster)
 library(reshape2)
 library(Rcpp)
 library(gridExtra)
+library(clustMixType)
 ```
 
 
@@ -48,6 +49,9 @@ data <- data %>%
     "TrafficType", "VisitorType"
   )] %>%
   sample_n(1000)  # Randomly sample 1000 observations
+
+# Data without revenue variable
+data_no_revenue <- data %>% select(-Revenue)
 
 str(data)
 ```
@@ -284,6 +288,265 @@ p2 = ggplot(melt(d_matching_coefficients_6[1:500,1:500]), aes(Var1, Var2, fill =
 
 ```{r}
 grid.arrange(p1, p2, ncol = 2)
+```
+
+
+# Cluster analysis
+
+Clustering is an unsupervised learning technique used to group data based on similarities. It does not require prior knowledge of the number of groups and is useful for discovering patterns, understanding relationships, and summarizing data. In this section, I will apply several clustering methods, including hierarchical and non hierarchical clustering, to identify meaningful clusters in the dataset.
+
+- **Hierarchical Clustering:**  
+  This method builds a hierarchy of clusters, either by starting with individual data points and merging them (agglomerative) or by starting with one large group and splitting it (divisive). Different linkage criteria (single, complete, and average) were used to calculate the distance between clusters, with results shown in dendrograms.
+
+- **K-Means Clustering:**  
+  K-means is a method that divides the data into a predefined number of clusters by minimizing the difference within each group. The optimal number of clusters was determined using the elbow method and silhouette analysis.
+
+- **K-Medoids Clustering:**  
+  K-medoids is similar to k-means, but it uses actual data points as the center of each cluster, making it more flexible with different distance measures. The PAM (Partitioning Around Medoids) algorithm was used to find the best clusters.
+
+These techniques were chosen to explore different ways of grouping the data and to find meaningful patterns. Each method was applied with careful consideration of the dataset’s characteristics to ensure accurate and useful results.
+
+## Hierarchical Clustering
+
+```{r}
+# dissimilarity matrix
+d = daisy(data_no_revenue, metric = "gower")
+
+
+
+# Hierarchical clustering
+hc_single <- hclust(d, method = "single")
+hc_complete <- hclust(d, method = "complete")
+hc_average <- hclust(d, method = "average")
+
+cophenetic_dist_single <- cophenetic(hc_single)
+cophenetic_dist_complete <- cophenetic(hc_complete)
+cophenetic_dist_average <- cophenetic(hc_average)
+
+coph_corr_single <- cor(d, cophenetic_dist_single)
+coph_corr_complete <- cor(d, cophenetic_dist_complete)
+coph_corr_average <- cor(d, cophenetic_dist_average)
+
+cat("Cophenetic Correlation Coefficient (Single Linkage):", coph_corr_single, "\n")
+cat("Cophenetic Correlation Coefficient (Complete Linkage):", coph_corr_complete, "\n")
+cat("Cophenetic Correlation Coefficient (Average Linkage):", coph_corr_average, "\n")
+
+k = sqrt(nrow(data)/2)
+
+plot(hc_single, main = "Hierarchical Clustering Dendrogram", xlab = "", sub = "", labels = FALSE)
+rect.hclust(hc_single, k, border = "red")
+
+plot(hc_complete, main = "Hierarchical Clustering Dendrogram", xlab = "", sub = "", labels = FALSE)
+rect.hclust(hc_complete, k, border = "red")
+
+plot(hc_average, main = "Hierarchical Clustering Dendrogram", xlab = "", sub = "", labels = FALSE)
+rect.hclust(hc_average, k, border = "red")
+```
+
+```{r}
+# Analyze the clusters by a specific variable (e.g., Revenue)
+data_clusters <- data
+data_clusters$cluster_single <- cutree(hc_single, k = k)
+data_clusters$cluster_complete <- cutree(hc_complete, k = k)
+data_clusters$cluster_average <- cutree(hc_average, k = k)
+
+
+
+# Step 1: Calculate proportions for each cluster
+proportions <- data_clusters %>%
+  group_by(cluster_single, Revenue) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(cluster_single) %>%
+  mutate(proportion = count / sum(count))
+
+# Step 2: Create the bar plot
+ggplot(proportions, aes(x = factor(cluster_single), y = proportion, fill = factor(Revenue))) +
+  geom_bar(stat = "identity", position = "fill", width = 0.7) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Proportion of Revenue (Binary) by Cluster",
+    x = "Cluster (cluster_single)",
+    y = "Proportion",
+    fill = "Revenue"
+  ) +
+  theme_minimal()
+
+
+# Step 1: Calculate proportions for each cluster
+proportions <- data_clusters %>%
+  group_by(cluster_complete, Revenue) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(cluster_complete) %>%
+  mutate(proportion = count / sum(count))
+
+# Step 2: Create the bar plot
+ggplot(proportions, aes(x = factor(cluster_complete), y = proportion, fill = factor(Revenue))) +
+  geom_bar(stat = "identity", position = "fill", width = 0.7) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Proportion of Revenue (Binary) by Cluster",
+    x = "Cluster (cluster_single)",
+    y = "Proportion",
+    fill = "Revenue"
+  ) +
+  theme_minimal()
+
+
+# Step 1: Calculate proportions for each cluster
+proportions <- data_clusters %>%
+  group_by(cluster_average, Revenue) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(cluster_average) %>%
+  mutate(proportion = count / sum(count))
+
+# Step 2: Create the bar plot
+ggplot(proportions, aes(x = factor(cluster_average), y = proportion, fill = factor(Revenue))) +
+  geom_bar(stat = "identity", position = "fill", width = 0.7) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Proportion of Revenue (Binary) by Cluster",
+    x = "Cluster (cluster_single)",
+    y = "Proportion",
+    fill = "Revenue"
+  ) +
+  theme_minimal()
+
+```
+
+
+## Non-Hierarchical Clustering
+
+### K-prototypes Clustering
+
+
+```{r}
+# Range of k to try
+k_values <- 2:25  
+
+# Initialize vectors to store silhouette widths and WCSS values
+sil_width <- numeric(length(k_values))
+wcss <- numeric(length(k_values))
+
+# Loop over different values of k to compute silhouette widths and WCSS
+for (k in k_values) {
+  # Run k-medoids with k clusters
+  kproto_result <- kproto(data, type = "gower", k = k)  # Replace 'your_data' with your dataset
+  
+  # Compute the silhouette width
+  sil <- silhouette(kproto_result$cluster, d)  # Compute silhouette
+  sil_width[k - 1] <- mean(sil[, 3])  # Store the average silhouette width
+  
+  # Calculate WCSS (within-cluster sum of squares)
+  wcss[k - 1] <- kproto_result$tot.withinss  # Total within-cluster sum of squares
+}
+
+# Plot the Silhouette Width for different k values
+par(mfrow = c(1, 2))  # Set up 1 row, 2 columns for plots
+
+plot(k_values, sil_width, type = "b", pch = 19, col = "blue",
+     xlab = "Number of Clusters (k)", ylab = "Average Silhouette Width",
+     main = "Silhouette Plot for Different k Values")
+
+# Plot WCSS for different k values (Elbow Method)
+plot(k_values, wcss, type = "b", pch = 19, col = "red",
+     xlab = "Number of Clusters (k)", ylab = "WCSS",
+     main = "Elbow Method for Optimal k")
+
+# Find the optimal k based on the Silhouette plot
+optimal_k_silhouette <- k_values[which.max(sil_width)]
+cat("Optimal k based on Silhouette plot:", optimal_k_silhouette, "\n")
+
+# Find the optimal k based on the Elbow method (visually identify elbow)
+# You can manually inspect the "elbow" point in the WCSS plot
+
+```
+
+```{r}
+kproto_result <- kproto(data, type = "gower", k = 7)
+```
+
+
+```{r}
+data_clusters$cluster_kproto <- kproto$cluster
+
+# Step 1: Calculate proportions for each cluster
+proportions <- data_clusters %>%
+  group_by(kproto, Revenue) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(kproto) %>%
+  mutate(proportion = count / sum(count))
+
+# Step 2: Create the bar plot
+ggplot(proportions, aes(x = factor(kproto), y = proportion, fill = factor(Revenue))) +
+  geom_bar(stat = "identity", position = "fill", width = 0.7) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Proportion of Revenue (Binary) by Cluster",
+    x = "Cluster (cluster_single)",
+    y = "Proportion",
+    fill = "Revenue"
+  ) +
+  theme_minimal()
+
+```
+
+### K-medoids Clustering
+
+```{r}
+# Range of k to try
+k_values <- 2:25  
+
+# Initialize vectors to store silhouette widths and WCSS values
+sil_width <- numeric(length(k_values))
+
+# Loop over different values of k to compute silhouette widths and WCSS
+for (k in k_values) {
+  # Run k-medoids with k clusters
+  kmedoids_result <- pam(d, k = k)  # Replace 'your_data' with your dataset
+  # Compute the silhouette width
+  sil <- silhouette(kmedoids_result$cluster, d)  # Compute silhouette
+  sil_width[k - 1] <- mean(sil[, 3])  # Store the average silhouette width
+  
+  # Calculate WCSS (within-cluster sum of squares)
+}
+
+# Plot the Silhouette Width for different k values
+par(mfrow = c(1, 2))  # Set up 1 row, 2 columns for plots
+
+plot(k_values, sil_width, type = "b", pch = 19, col = "blue",
+     xlab = "Number of Clusters (k)", ylab = "Average Silhouette Width",
+     main = "Silhouette Plot for Different k Values")
+
+# Find the optimal k based on the Silhouette plot
+optimal_k_silhouette <- k_values[which.max(sil_width)]
+cat("Optimal k based on Silhouette plot:", optimal_k_silhouette, "\n")
+
+# Find the optimal k based on the Elbow method (visually identify elbow)
+# You can manually inspect the "elbow" point in the WCSS plot
+```
+
+
+```{r}
+data_clusters$cluster_kmedoids <- kmedoids$clustering
+
+# Step 1: Calculate proportions for each cluster
+proportions <- data_clusters %>%
+  group_by(cluster_kmedoids, Revenue) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(cluster_kmedoids) %>%
+  mutate(proportion = count / sum(count))
+
+# Step 2: Create the bar plot
+ggplot(proportions, aes(x = factor(cluster_kmedoids), y = proportion, fill = factor(Revenue))) +
+  geom_bar(stat = "identity", position = "fill", width = 0.7) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Proportion of Revenue (Binary) by Cluster",
+    x = "Cluster (cluster_single)",
+    y = "Proportion",
+    fill = "Revenue"
+  ) +
+  theme_minimal()
 ```
 
 
