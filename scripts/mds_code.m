@@ -34,7 +34,7 @@ checkEuclideanCompatibility(D_gowers);
 %% Compute MDS
 [Y, ~, ~, ~] = coorp(D_gowers);
 correlaciones2(data, Y, 9, 1, varNames);
-
+csvwrite('data/matlab_datasets/MDS_matrix.csv', Y)
 %% PC1 most correlated vars
 identif_cuantis(data(:,[7,8]), Y, varNames(:,[7,8]));
 identif_cualis(data(:,[10,13,14]), Y, varNames(:,[10,13,14]));
