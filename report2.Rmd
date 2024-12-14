@@ -22,7 +22,18 @@ library(reshape2)
 library(Rcpp)
 library(gridExtra)
 ```
+# 1. Introduction
 
+The dataset provides insights into user behavior on an online shopping site. It features various types of data, including continuous, binary, and categorical variables. These variables encompass the count of administrative actions (`Administrative`), interactions related to products (`ProductRelated`), and binary markers indicating whether a visit took place on a weekend (`Weekend`) or led to a purchase (`Revenue`). Furthermore, it includes categorical information such as the user's browser (`Browser`), location (`Region`), and type of visitor (`VisitorType`).
+
+## Goals of the Analysis
+
+The primary objective of this analysis is to assess the dataset with different distance metrics and determine the most suitable metric for each type of data. By examining the relationships among observations, this study seeks to improve the analysis of user behaviors and group patterns efficiently.
+
+
+## Importance of Distance Metrics
+
+Distance metrics are essential in data science, particularly for clustering and classification. They assess how similar or different data points are and significantly affect the quality of outcomes. Choosing the right metric is crucial for achieving precise and valuable analyses, especially with mixed-type data.
 
 ```{r, include=FALSE}
 # Import data
@@ -61,44 +72,54 @@ binary_data = data[, c("Weekend", "Revenue")]
 categorical_data = data[, c("SpecialDay", "Month", "OperatingSystems", "Browser", "Region", "TrafficType", "VisitorType")]
 ```
 
-# Multidimenional Scaling
+# 2. Definition of Distance Metrics
 
-Multidimensional Scaling (MDS) is a powerful technique used to visualize complex data by arranging points in a low-dimensional Euclidean space. Unlike Principal Component Analysis (PCA), which works on raw data, MDS operates on a **distance matrix**, making it suitable for various types of data, including binary, categorical, and quantitative.
+## What Are Distance Metrics?
+Distance metrics are mathematical tools that measure how similar or different two data points are within a dataset. They play an important role in clustering, classification, and reducing dimensions, as they define the "closeness" or "separation" of two observations in a feature space.
 
-The goal of MDS is to find a configuration of points in a lower-dimensional space that best preserves the pairwise distances from the original distance matrix. This allows us to visually explore the relationships between observations in a way that is easier to interpret.
+## Why Are Distance Metrics Important?
+Distance metrics are essential to numerous machine learning algorithms, as they influence how data points are categorized or clustered. Selecting the appropriate metric is crucial for achieving accurate and significant outcomes, especially when dealing with different types of data.
 
-### **Advantages of MDS:**
-- Works with any type of data as long as a distance measure can be computed.
-- Provides a clear visual representation of complex relationships in the data.
+# 3. Distance Metrics for Different Data Types
 
-### **Challenges:**
-- Interpreting the principal coordinates can be more difficult than in PCA.
-- MDS can be computationally expensive for large datasets.
+---
 
-MDS is particularly useful when we only have distance information and want to understand the structure of the data without needing to rely on raw feature values. In this section, we will apply MDS to our dataset to uncover its underlying patterns.
+## Continuous Data
+For continuous variables, the following metrics are commonly used:
 
-## Distance Metrics
+- **Euclidean Distance**:
+  - the simplest measure, determining the direct distance between two points in a multi-dimensional environment.
+  - Formula:
+    \[
+    d(x, y) = \sqrt{\sum_{i=1}^n (x_i - y_i)^2}
+    \]
+  - **Use Case:** Works well for normalized continuous data.
+  
+  - **Manhattan Distance**:
+    - Calculates the total of the absolute differences between matching features.
+    - Formula:
+    \[
+    d(x, y) = \sum_{i=1}^n |x_i - y_i|
+    \]
+  - **Use Case:** Appropriate for data with lower dimensions or when linear variations are more significant.
+  
+  - **Canberra Distance**:
+  - Places greater emphasis on minor differences, particularly for values that are low in sizes.
+  - Formula:
+    \[
+    d(x, y) = \sum_{i=1}^n \frac{|x_i - y_i|}{|x_i| + |y_i|}
+    \]
+  - **Use Case:** Ideal for datasets with variables of small sizes.
 
-When applying Multidimensional Scaling (MDS), selecting the appropriate distance metric is crucial because it directly impacts the MDS configuration and how relationships between data points are interpreted.
+- **Mahalanobis Distance**:
+  - Considers the relationships between variables and adjusts distances based on variance.
+  - Formula:
+    \[
+    d(x, y) = \sqrt{(x - y)^T S^{-1} (x - y)}
+    \]
+    Where \(S\) is the covariance matrix.
+  - **Use Case:** Ideal for related continuous variables that have different scales.
 
-Different distance metrics capture different aspects of similarity or dissimilarity, which leads to varying representations of the data in the low-dimensional space. An inappropriate distance metric can distort these relationships, resulting in misleading conclusions.
-
-For example, using **Euclidean distance** on a dataset with both quantitative and qualitative variables may not reflect the true dissimilarities, as it assumes continuous and scale-invariant data. In such cases, a metric like **Gower’s distance**, which can handle mixed data types, would be more appropriate.
-
-### Why the Right Distance Metric Matters:
-- **Data Type Compatibility:**
-  - **Euclidean distance** is ideal for continuous, quantitative data.
-  - **Matching coefficients** are used for binary data.
-  - **Gower’s distance** is versatile, handling quantitative, binary, and categorical data.
-
-- **Scale Invariance:**
-  - **Euclidean distance** is **not scale-invariant**, meaning larger-scaled variables influence the distance more.
-  - **Mahalanobis distance** is **scale-invariant**, adjusting for variance and correlations between variables.
-
-
-### Comparison of Distance Metrics
-
-#### Continuous Data
 ```{r, cache = TRUE}
 # Euclidean distance
 d_euclidean <- as.matrix(dist(continuous_data, method = "euclidean"))
@@ -110,8 +131,7 @@ d_manhattan <- as.matrix(dist(continuous_data, method = "manhattan"))
 d_canberra <- as.matrix(dist(continuous_data, method = "canberra"))
 
 # Mahalanobis distance
-sourceCpp("scripts/mahalanobis_dist.cpp")
-D <- maha(as.matrix(continuous_data))
+d_mahalanobis_matrix <- as.matrix(dist(as.matrix(continuous_data), diag = TRUE, upper = TRUE))
 ```
 
 ```{r, cache = TRUE}
@@ -142,7 +162,7 @@ p3 <- ggplot(melt(d_canberra[1:500,1:500]), aes(Var1, Var2, fill = value)) +
   coord_fixed()
 
 
-p4 <- ggplot(melt(D[1:500,1:500]), aes(Var1, Var2, fill = value)) +
+p4 <- ggplot(melt(d_mahalanobis_matrix[1:500,1:500]), aes(Var1, Var2, fill = value)) +
   geom_tile() +
   scale_fill_gradient(low = "white", high = "blue") +
   theme_minimal() +
@@ -156,8 +176,28 @@ p4 <- ggplot(melt(D[1:500,1:500]), aes(Var1, Var2, fill = value)) +
 # Set up a 2x2 layout for the plots
 grid.arrange(p1, p2, p3, p4, ncol = 2)
 ```
+---
 
-#### Binary Data
+## Binary Data
+For binary variables, the following measurements are commonly utilized:
+
+- **Jaccard Distance**:
+  - Focuses on mismatches while ignoring shared absences.
+  - Formula:
+    \[
+    d(x, y) = 1 - \frac{a}{a + b + c}
+    \]
+  - **Use Case:** Appropriate for sparse binary datasets.
+
+- **Sokal-Michener Distance**:
+  - Takes into account both matches and mismatches.
+  - Formula:
+    \[
+    d(x, y) = 1 - \frac{a + d}{p}
+    \]
+    
+  - **Use Case:** Ideal for datasets where matches are as important as mismatches.
+
 
 ```{r}
 # Jaccard distance
@@ -188,6 +228,7 @@ d_sokal_michener <- sokal_michener(as.matrix(binary_data))
 ```
 
 
+
 ```{r, cache = TRUE}
 # Plot the distance matrices in heatmaps using ggplot
 p1 = ggplot(melt(d_jaccard[1:500,1:500]), aes(Var1, Var2, fill = value)) +
@@ -210,9 +251,26 @@ p2 = ggplot(melt(d_sokal_michener[1:500,1:500]), aes(Var1, Var2, fill = value)) 
 grid.arrange(p1, p2, ncol = 2)
 
 ```
+---
 
+## Categorical Data
+For categorical variables, the following metrics are effective:
 
-#### Categorical Data
+- **Matching Coefficients**:
+  - Measure the similarity between categorical variables by counting exact matches.
+  - Formula:
+    \[
+    d(x, y) = \frac{\text{Number of Matches}}{\text{Total Observations}}
+    \]
+  - **Use Case:** Suitable for datasets where similarity in categories matters.
+
+- **Dissimilarity Coefficients**:
+  - Focus on differences between categories.
+  - Formula:
+    \[
+    d(x, y) = \frac{\text{Number of Mismatches}}{\text{Total Observations}}
+    \]
+  - **Use Case:** Useful when the focus is on categorical diversity.
 
 
 ```{r}
@@ -260,6 +318,7 @@ dissim_coefficients_6 <- function(data) {
 }
 ```
 
+
 ```{r}
 d_matching_coefficients <- matching_coefficients(as.matrix(categorical_data))
 d_matching_coefficients_6 <- dissim_coefficients_6(as.matrix(categorical_data))
@@ -285,6 +344,96 @@ p2 = ggplot(melt(d_matching_coefficients_6[1:500,1:500]), aes(Var1, Var2, fill =
 ```{r}
 grid.arrange(p1, p2, ncol = 2)
 ```
+---
 
+## Mixed Data
+For datasets with mixed variable types (continuous, binary, and categorical), a flexible metric is required:
+
+- **Gower Distance**:
+  - Combines different metrics depending on the data type of each feature.
+  - Formula:
+    \[
+    d(x, y) =  1 - \frac{\sum_{h=1}^{p} s_h(x_h, y_h)}{p}
+    \]
+    Where s_h(x_h, y_h) is a similarity score for each variable h.
+  - **Use Case:** Ideal for datasets with mixed data types.
+  
+  
+```{r}
+# Convert binary variables to factor
+binary_data <- lapply(binary_data, as.factor)
+
+# Combine the continuous, binary, and categorical data into a single dataset
+mixed_data <- data.frame(continuous_data, binary_data, categorical_data)
+
+# Compute Gower Distance using daisy()
+d_gower_daisy <- daisy(mixed_data, metric = "gower")
+
+# Convert Gower Distance matrix to long format for ggplot2
+melted_gower <- melt(as.matrix(d_gower_daisy))
+
+# Plot the heatmap
+p_gower <- ggplot(melted_gower, aes(Var1, Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "white", high = "blue") +
+  theme_minimal() +
+  labs(title = "Gower Distance Heatmap") +
+  coord_fixed()
+
+# Display the plot
+print(p_gower)
+
+```
+---
+
+# 4. Comparison of Distance Metrics
+
+## Final Remarks
+Analyzing different distance metrics gave important information about how the observations in the dataset are related. Each metric has its own strengths suited for certain types of data.
+
+- **Continuous Data**: Looking at different distance metrics like Euclidean, Manhattan, Canberra, and Mahalanobis provided various views, showing how scale and correlations matter.
+- **Binary Data**: Jaccard and Sokal-Michener metrics highlighted the importance of presence/absence and balanced matches, respectively.
+- **Categorical Data**: Matching and dissimilarity coefficients showed different but helpful views on how categories are similar and different.
+- **Mixed Data**: The Gower Distance proved to be the best metric, integrating input from continuous, binary, and categorical variables into one clear measure.
+
+Although individual metrics gave more insight into specific data types, the Gower Distance was chosen for the final Multidimensional Scaling (MDS) analysis. This decision guarantees that all types of variables are accurately represented, reflecting the mixed nature of the dataset and providing a complete view of the underlying patterns.
+
+# 5. Multidimensional Scaling (MDS)
+
+## Use of Distance Matrices in MDS
+
+Multidimensional Scaling (MDS) is a technique that reduces dimensions by using distance matrices to show high-dimensional data in a simpler form. Its aim is to keep the distances between pairs of observations as close as possible in the new space.
+
+The steps are: 
+
+- 1. Create a distance matrix (\(D\)) for all observation pairs using a selected distance method (Gower). 
+
+- 2. Adjust the points in the lower-dimensional space so that the distances between them reflect the original distance matrix.
+
+MDS is particularly useful for visualizing patterns, clusters, and relationships in high-dimensional data.
+
+
+## Multidimensional Scaling (MDS) Using Gower's Distance
+
+### Objective
+
+Reduce the dimensions of a mixed-type dataset with MDS and Gower's distance.
+
+### Results and Insights
+
+### 1. Cumulative Variance Explained
+- The cumulative variance plot (Figure 1) indicates that the first two dimensions account for 18.54% of the overall variability. 
+- This suggests that more dimensions are necessary to fully understand the data's structure.
+
+### 2. MDS Configuration
+- The scatterplot (Figure 2) shows the first two dimensions (PC1 and PC2).
+- Clusters and groups suggest that some observations share similar traits.
+- The MDS setup reveals patterns in the data that match its mixed characteristics.
+
+#### Figures
+
+| ![Cumulative Variance Explained](figures/cumulative_var_explained.png){ width=300px } | ![MDS Configuration](figures/pc1_pc2_visualization.png){ width=300px } |
+|:-----------------------------------------------------------------------------------:|:--------------------------------------------------------------------:|
+| **Figure 1: Cumulative Variance Explained**                                        | **Figure 2: MDS Configuration**                                    |
 
 
