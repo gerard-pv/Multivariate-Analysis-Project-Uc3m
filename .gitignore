@@ -6,3 +6,4 @@
 *.RData
 report2_cache/
 report2_files/
+.DS_Store
